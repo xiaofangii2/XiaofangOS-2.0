@@ -1,7 +1,7 @@
 #include "sha256.h"
-#include <string.h>
-#include <stdlib.h>
+#include "sys.h"
 #include <stdint.h>
+#include <stddef.h>
 
 static const uint32_t K[64] = {
 0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
@@ -13,29 +13,20 @@ static const uint32_t K[64] = {
 0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
 0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
 };
-
 #define ROTR(x,n) (((x)>>(n))|((x)<<(32-(n))))
-
 static void sha256_raw(const unsigned char *data, size_t len, unsigned char out[32]) {
-    uint32_t h[8] = {
-        0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,
-        0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19
-    };
+    uint32_t h[8] = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19};
     size_t total = ((len + 9 + 63) / 64) * 64;
-    unsigned char *msg = (unsigned char *)calloc(1, total);
-    memcpy(msg, data, len);
+    unsigned char msg[256];
+    for (size_t i = 0; i < 256; i++) msg[i] = 0;
+    for (size_t i = 0; i < len && i < 200; i++) msg[i] = data[i];
     msg[len] = 0x80;
     uint64_t bits = (uint64_t)len * 8;
     for (int i = 0; i < 8; i++) msg[total - 1 - i] = (bits >> (8 * i)) & 0xff;
-
     for (size_t off = 0; off < total; off += 64) {
         uint32_t w[64];
-        for (int i = 0; i < 16; i++) {
-            w[i] = ((uint32_t)msg[off+i*4] << 24) |
-                   ((uint32_t)msg[off+i*4+1] << 16) |
-                   ((uint32_t)msg[off+i*4+2] << 8) |
-                   ((uint32_t)msg[off+i*4+3]);
-        }
+        for (int i = 0; i < 16; i++)
+            w[i] = ((uint32_t)msg[off+i*4] << 24) | ((uint32_t)msg[off+i*4+1] << 16) | ((uint32_t)msg[off+i*4+2] << 8) | ((uint32_t)msg[off+i*4+3]);
         for (int i = 16; i < 64; i++) {
             uint32_t s0 = ROTR(w[i-15],7) ^ ROTR(w[i-15],18) ^ (w[i-15] >> 3);
             uint32_t s1 = ROTR(w[i-2],17) ^ ROTR(w[i-2],19) ^ (w[i-2] >> 10);
@@ -54,21 +45,14 @@ static void sha256_raw(const unsigned char *data, size_t len, unsigned char out[
         h[0]+=a; h[1]+=b; h[2]+=c; h[3]+=d; h[4]+=e; h[5]+=f; h[6]+=g; h[7]+=hh;
     }
     for (int i = 0; i < 8; i++) {
-        out[i*4]   = (h[i] >> 24) & 0xff;
-        out[i*4+1] = (h[i] >> 16) & 0xff;
-        out[i*4+2] = (h[i] >> 8) & 0xff;
-        out[i*4+3] = h[i] & 0xff;
+        out[i*4] = (h[i] >> 24) & 0xff; out[i*4+1] = (h[i] >> 16) & 0xff;
+        out[i*4+2] = (h[i] >> 8) & 0xff; out[i*4+3] = h[i] & 0xff;
     }
-    free(msg);
 }
-
 void sha256_hex(const char *input, char out_hex[65]) {
     unsigned char digest[32];
-    sha256_raw((const unsigned char *)input, strlen(input), digest);
+    sha256_raw((const unsigned char *)input, slen(input), digest);
     static const char hex[] = "0123456789abcdef";
-    for (int i = 0; i < 32; i++) {
-        out_hex[i*2]   = hex[digest[i] >> 4];
-        out_hex[i*2+1] = hex[digest[i] & 0xf];
-    }
+    for (int i = 0; i < 32; i++) { out_hex[i*2] = hex[digest[i] >> 4]; out_hex[i*2+1] = hex[digest[i] & 0xf]; }
     out_hex[64] = 0;
 }

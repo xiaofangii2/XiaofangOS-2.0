@@ -1,0 +1,89 @@
+#include "sys.h"
+
+long sys_write(int fd, const void *buf, unsigned long len) {
+    long ret;
+    register long x8 __asm__("x8") = 64;
+    register long x0 __asm__("x0") = fd;
+    register long x1 __asm__("x1") = (long)buf;
+    register long x2 __asm__("x2") = len;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2) : "memory");
+    return ret;
+}
+long sys_read(int fd, void *buf, unsigned long len) {
+    long ret;
+    register long x8 __asm__("x8") = 63;
+    register long x0 __asm__("x0") = fd;
+    register long x1 __asm__("x1") = (long)buf;
+    register long x2 __asm__("x2") = len;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2) : "memory");
+    return ret;
+}
+long sys_openat(int dirfd, const char *path, int flags, int mode) {
+    long ret;
+    register long x8 __asm__("x8") = 56;
+    register long x0 __asm__("x0") = dirfd;
+    register long x1 __asm__("x1") = (long)path;
+    register long x2 __asm__("x2") = flags;
+    register long x3 __asm__("x3") = mode;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2), "r"(x3) : "memory");
+    return ret;
+}
+long sys_close(int fd) {
+    long ret;
+    register long x8 __asm__("x8") = 57;
+    register long x0 __asm__("x0") = fd;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0) : "memory");
+    return ret;
+}
+long sys_exit(int code) {
+    register long x8 __asm__("x8") = 93;
+    register long x0 __asm__("x0") = code;
+    __asm__ volatile("svc #0" : : "r"(x8), "r"(x0) : "memory");
+    return 0;
+}
+long sys_mkdirat(int dirfd, const char *path, int mode) {
+    long ret;
+    register long x8 __asm__("x8") = 34;
+    register long x0 __asm__("x0") = dirfd;
+    register long x1 __asm__("x1") = (long)path;
+    register long x2 __asm__("x2") = mode;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2) : "memory");
+    return ret;
+}
+void putc_(char c) { sys_write(1, &c, 1); }
+void puts_(const char *s) { unsigned long n = slen(s); if (n) sys_write(1, s, n); }
+void puts_line(const char *s) { puts_(s); putc_('\n'); }
+unsigned long slen(const char *s) { unsigned long n = 0; while (s[n]) n++; return n; }
+int scmp(const char *a, const char *b) { while (*a && *a == *b) { a++; b++; } return (unsigned char)*a - (unsigned char)*b; }
+void scpy(char *d, const char *s, int max) { int i = 0; while (s[i] && i < max - 1) { d[i] = s[i]; i++; } d[i] = 0; }
+int ssplit(char *line, char **argv, int max) {
+    int argc = 0; char *p = line;
+    while (*p && argc < max) {
+        while (*p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        argv[argc++] = p;
+        while (*p && *p != ' ' && *p != '\t') p++;
+        if (*p) *p++ = 0;
+    }
+    return argc;
+}
+
+long sys_ioctl(int fd, unsigned long req, void *arg) {
+    long ret;
+    register long x8 __asm__("x8") = 29;
+    register long x0 __asm__("x0") = fd;
+    register long x1 __asm__("x1") = req;
+    register long x2 __asm__("x2") = (long)arg;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2) : "memory");
+    return ret;
+}
+
+long sys_getdents64(int fd, void *buf, unsigned long len) {
+    long ret;
+    register long x8 __asm__("x8") = 61;
+    register long x0 __asm__("x0") = fd;
+    register long x1 __asm__("x1") = (long)buf;
+    register long x2 __asm__("x2") = len;
+    __asm__ volatile("svc #0" : "=r"(ret) : "r"(x8), "r"(x0), "r"(x1), "r"(x2) : "memory");
+    return ret;
+}

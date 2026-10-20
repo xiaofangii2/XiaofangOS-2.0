@@ -1,0 +1,2 @@
+#!/system/bin/sh
+exec /boot/loader /boot/xiaofang.elf
